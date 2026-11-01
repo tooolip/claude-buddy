@@ -11,6 +11,7 @@ make install    # same, but installs to ~/Applications (use this copy for "Open 
 make stop       # quit it
 make mem        # RSS, physical footprint and CPU of the running app
 make skin       # redraw the built-in skins (Mochi, Aftonsparv) from Tools/make-skin.swift
+make plush      # ray-trace the photoreal Plush alien skin from Tools/render-plush.swift
 make hooks      # add the buddy's hooks to ~/.claude/settings.json (merges, backs up first)
 make unhooks    # remove them again
 ```

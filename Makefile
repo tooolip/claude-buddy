@@ -3,7 +3,7 @@ CONFIG ?= release
 APP := build/ClaudeBuddy.app
 INSTALL_DIR := $(HOME)/Applications
 
-.PHONY: all build app icon run stop install skin hooks unhooks hooks-status mem clean
+.PHONY: all build app icon run stop install skin plush hooks unhooks hooks-status mem clean
 
 all: app
 
@@ -46,6 +46,12 @@ install: app stop
 skin:
 	swift Tools/make-skin.swift mochi Skins/default
 	swift Tools/make-skin.swift aftonsparv Skins/aftonsparv
+
+# Ray-traces the photoreal plush skin (about 20s on an M5).
+plush:
+	@mkdir -p build
+	swiftc -O Tools/render-plush.swift -o build/render-plush
+	build/render-plush Skins/plush-alien
 
 hooks:
 	python3 scripts/hooks.py install
