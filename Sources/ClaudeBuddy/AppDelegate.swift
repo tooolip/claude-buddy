@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Sessions mid-turn, seen via UserPromptSubmit, with when we last heard from them.
     private var workingSessions: [String: Date] = [:]
     private var workingSweep: Timer?
+    /// Last few hook events, for scripts/debug.sh snapshot.
+    private var debugEvents: [String] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Skin.seedUserFolder()
@@ -126,6 +128,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         guard let name = e["hook_event_name"] as? String, let sid = e["session_id"] as? String else { return }
+        if UserDefaults.standard.bool(forKey: "debug") {
+            debugEvents = Array((debugEvents + ["\(name) \(sid)"]).suffix(10))
+        }
         let cwd = e["cwd"] as? String
         switch name {
         case "UserPromptSubmit":
@@ -147,6 +152,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 show(Summary.firstSentence(Summary.clean(text)))
             }
+        case "StopFailure":
+            // A turn that died on an API error (auth, rate limit…) sends this instead of Stop.
+            workingSessions[sid] = nil
+            pet.setTalking(false, reason: "hook:" + sid)
+            guard !runner.isRunning else { return }
+            let detail = (e["error"] as? String) ?? (e["error_type"] as? String)
+            showReply("That turn failed" + (detail.map { ": \($0)" } ?? "."), session: sid, folder: cwd, autoHide: 30)
         case "Notification":
             let message = e["message"] as? String ?? "Claude needs you"
             let type = e["notification_type"] as? String ?? ""
@@ -244,7 +256,8 @@ extension AppDelegate {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var info: [String: Any] = ["state": pet.state.rawValue, "frame": pet.debugFrameIndex,
                                    "thread": thread?.id ?? "", "lastReplied": lastReplied?.id ?? "",
-                                   "hasAnimation": pet.view.sprite.animation(forKey: "frames") != nil]
+                                   "hasAnimation": pet.view.sprite.animation(forKey: "frames") != nil,
+                                   "hookEvents": debugEvents]
         for (name, win) in [("pet", pet.panel as NSWindow?), ("bubble", bubble.window), ("input", input.window),
                             ("settings", settings?.window)] {
             guard let win else { continue }

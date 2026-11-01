@@ -14,7 +14,7 @@ import sys
 import time
 
 SETTINGS = os.path.expanduser("~/.claude/settings.json")
-EVENTS = ["UserPromptSubmit", "Stop", "Notification"]
+EVENTS = ["UserPromptSubmit", "Stop", "StopFailure", "Notification"]
 MARK = "# claude-buddy"
 # Skips events from claude processes the buddy started itself; never blocks or fails Claude.
 COMMAND = (
