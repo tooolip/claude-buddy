@@ -75,7 +75,7 @@ def main():
             hooks.setdefault(event, []).append({"hooks": [{"type": "command", "command": COMMAND, "timeout": 5}]})
         save(settings)
         print("Installed Claude Buddy hooks for: " + ", ".join(EVENTS))
-        print("Sessions that are already open pick them up after a restart.")
+        print("Open sessions pick them up on their next prompt.")
     elif cmd == "uninstall":
         if not installed(settings):
             print("No Claude Buddy hooks to remove.")
