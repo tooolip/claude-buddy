@@ -24,6 +24,8 @@ final class PetView: NSView {
     var onClick: (() -> Void)?
     var onRightClick: ((NSEvent) -> Void)?
     var onDragChanged: ((Bool) -> Void)?
+    /// Horizontal mouse movement per drag event, for skins that face the way they're dragged.
+    var onDragMoved: ((CGFloat) -> Void)?
 
     private var dragStartMouse = NSPoint.zero
     private var dragStartOrigin = NSPoint.zero
@@ -63,6 +65,7 @@ final class PetView: NSView {
             onDragChanged?(true)
         }
         window?.setFrameOrigin(NSPoint(x: dragStartOrigin.x + dx, y: dragStartOrigin.y + dy))
+        onDragMoved?(event.deltaX)
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -89,10 +92,12 @@ final class Pet: NSObject {
     private(set) var state: PetState = .idle
 
     private var isDragging = false
+    private var dragFacing: PetState = .dragging
+    private var flashState: PetState?
+    private var flashTimer: Timer?
     private var isAsleep = false
     private var talkingReasons = Set<String>()
     private var sleepTimer: Timer?
-    private var burstTimer: Timer?
 
     var onMoved: (() -> Void)?
 
@@ -106,11 +111,17 @@ final class Pet: NSObject {
         view.onDragChanged = { [weak self] dragging in
             guard let self else { return }
             isDragging = dragging
+            dragFacing = .dragging
             if !dragging {
                 Prefs.petOrigin = panel.frame.origin
                 onMoved?()
             }
             poke()
+        }
+        view.onDragMoved = { [weak self] dx in
+            guard let self, abs(dx) >= 2 else { return }
+            dragFacing = dx > 0 ? .draggingRight : .draggingLeft
+            refresh()
         }
         NotificationCenter.default.addObserver(self, selector: #selector(occlusionChanged),
                                                name: NSWindow.didChangeOcclusionStateNotification, object: panel)
@@ -159,13 +170,20 @@ final class Pet: NSObject {
         poke()
     }
 
-    /// Talk for a moment, e.g. when a reply bubble pops up.
+    /// Wave (or talk, for skins without a wave) for a moment, e.g. when a reply bubble pops up.
     func talkBurst(_ seconds: TimeInterval = 2.5) {
-        burstTimer?.invalidate()
-        setTalking(true, reason: "burst")
-        burstTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
-            self?.setTalking(false, reason: "burst")
+        flash(.waving, for: seconds)
+    }
+
+    /// Plays a state for a while over talking/sleeping, e.g. .failed when a turn errors.
+    func flash(_ state: PetState, for seconds: TimeInterval) {
+        flashTimer?.invalidate()
+        flashState = state
+        flashTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
+            self?.flashState = nil
+            self?.refresh()
         }
+        poke()
     }
 
     func clearTalking(prefix: String) {
@@ -192,7 +210,8 @@ final class Pet: NSObject {
 
     private var desiredState: PetState {
         if let debugForcedState { return debugForcedState }
-        if isDragging { return .dragging }
+        if isDragging { return dragFacing }
+        if let flashState { return flashState }
         if !talkingReasons.isEmpty { return .talking }
         if isAsleep { return .sleeping }
         return .idle
@@ -202,11 +221,16 @@ final class Pet: NSObject {
         let next = desiredState
         guard force || next != state else { return }
         state = next
-        play()
+        play(force: force)
     }
 
-    private func play() {
+    private var playing: Skin.Animation?
+
+    private func play(force: Bool = true) {
         let anim = skin.animation(for: state)
+        // Two states can share frames through fallbacks; don't restart the loop for those.
+        if !force, let current = playing, current.frames.first === anim.frames.first { return }
+        playing = anim
         let sprite = view.sprite
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -216,7 +240,11 @@ final class Pet: NSObject {
             let a = CAKeyframeAnimation(keyPath: "contents")
             a.values = anim.frames
             a.calculationMode = .discrete
-            a.duration = Double(anim.frames.count) / anim.fps
+            let total = anim.durations.reduce(0, +)
+            var t = 0.0, times: [NSNumber] = []
+            for d in anim.durations { times.append(NSNumber(value: t / total)); t += d }
+            a.keyTimes = times
+            a.duration = total
             a.repeatCount = .infinity
             a.isRemovedOnCompletion = false
             sprite.add(a, forKey: "frames")

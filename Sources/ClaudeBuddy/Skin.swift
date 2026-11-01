@@ -3,6 +3,17 @@ import ImageIO
 
 enum PetState: String, CaseIterable {
     case idle, talking, sleeping, dragging
+    // Optional: skins without these fall back (see `fallback`).
+    case draggingLeft, draggingRight, waving, failed, waiting
+
+    var fallback: PetState? {
+        switch self {
+        case .draggingLeft, .draggingRight: return .dragging
+        case .waving: return .talking
+        case .failed, .waiting: return .idle
+        default: return nil
+        }
+    }
 }
 
 /// A skin is a folder with manifest.json plus one horizontal sprite strip per state.
@@ -11,8 +22,13 @@ final class Skin {
     struct Manifest: Decodable {
         struct State: Decodable {
             let sheet: String
-            let frames: Int
-            let fps: Double
+            let frames: Int?
+            let fps: Double?
+            /// Grid sheets (like Codex pets): which row, and optionally which columns in order.
+            let row: Int?
+            let cells: [Int]?
+            /// Per-frame milliseconds; overrides fps.
+            let durations: [Double]?
         }
         let name: String
         let frameWidth: Int
@@ -23,7 +39,8 @@ final class Skin {
 
     struct Animation {
         let frames: [CGImage]
-        let fps: Double
+        /// Seconds per frame.
+        let durations: [Double]
     }
 
     let name: String
@@ -52,23 +69,34 @@ final class Skin {
         let target = CGSize(width: pointSize.width * backingScale, height: pointSize.height * backingScale)
 
         var anims: [PetState: Animation] = [:]
+        var sheets: [String: CGImage] = [:]
         for (key, spec) in m.states {
             guard let state = PetState(rawValue: key) else { continue }
-            let url = directory.appendingPathComponent(spec.sheet) as CFURL
-            guard let src = CGImageSourceCreateWithURL(url, nil),
-                  let sheet = CGImageSourceCreateImageAtIndex(src, 0, nil) else {
+            guard let sheet = sheets[spec.sheet] ?? Self.readImage(directory.appendingPathComponent(spec.sheet)) else {
                 throw NSError(domain: "Skin", code: 1, userInfo: [NSLocalizedDescriptionKey: "Can't read \(spec.sheet)"])
             }
-            let frames = (0..<spec.frames).compactMap { i -> CGImage? in
-                let rect = CGRect(x: i * m.frameWidth, y: 0, width: m.frameWidth, height: m.frameHeight)
+            sheets[spec.sheet] = sheet
+            let columns = spec.cells ?? Array(0..<(spec.frames ?? spec.durations?.count ?? 1))
+            let y = (spec.row ?? 0) * m.frameHeight
+            let frames = columns.compactMap { i -> CGImage? in
+                let rect = CGRect(x: i * m.frameWidth, y: y, width: m.frameWidth, height: m.frameHeight)
                 return sheet.cropping(to: rect).flatMap { Self.resample($0, to: target) }
             }
-            if !frames.isEmpty { anims[state] = Animation(frames: frames, fps: max(spec.fps, 0.5)) }
+            guard !frames.isEmpty else { continue }
+            let perFrame = 1 / max(spec.fps ?? 8, 0.5)
+            let durations = frames.indices.map { i in
+                spec.durations.flatMap { i < $0.count ? max($0[i], 20) / 1000 : nil } ?? perFrame
+            }
+            anims[state] = Animation(frames: frames, durations: durations)
         }
         guard anims[.idle] != nil else {
             throw NSError(domain: "Skin", code: 2, userInfo: [NSLocalizedDescriptionKey: "Skin has no idle state"])
         }
         animations = anims
+    }
+
+    private static func readImage(_ url: URL) -> CGImage? {
+        CGImageSourceCreateWithURL(url as CFURL, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
     }
 
     private static func resample(_ image: CGImage, to size: CGSize) -> CGImage? {
@@ -81,9 +109,14 @@ final class Skin {
         return ctx.makeImage()
     }
 
-    /// Missing states fall back to idle, so a skin can start with just one strip.
+    /// Missing states fall back (eventually to idle), so a skin can start with just one strip.
     func animation(for state: PetState) -> Animation {
-        animations[state] ?? animations[.idle]!
+        var s: PetState? = state
+        while let cur = s {
+            if let a = animations[cur] { return a }
+            s = cur.fallback
+        }
+        return animations[.idle]!
     }
 
     // MARK: - Finding skins

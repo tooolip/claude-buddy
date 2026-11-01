@@ -45,6 +45,11 @@ thread rather than resuming it from the CLI, so the two never write to the same 
 
 A skin is a folder with `manifest.json` and one horizontal PNG strip per state (`idle`, `talking`,
 `sleeping`, `dragging`; missing states fall back to idle). See `Skins/default/manifest.json`.
+A state can also point at a `row` of a grid sheet, pick `cells` (columns), and give per-frame
+`durations` in ms instead of `fps`. Optional extra states: `draggingLeft`/`draggingRight` (fall
+back to `dragging`), `waving` (reply arrived; falls back to `talking`), `failed`, `waiting`.
+`python3 scripts/import-codex-pet.py <spritesheet.png> <id> "<Name>" [--sleep 2,3]` turns a
+Codex pet sheet into a user skin.
 Built-in skins ship in the app's Resources. User skins live in
 `~/Library/Application Support/ClaudeBuddy/Skins/`, which gets a `my-skin` copy of the default on
 first launch. Pick one in Settings (right-click the pet), along with a size from 50% to 200%.

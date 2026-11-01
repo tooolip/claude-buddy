@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 pet.setTalking(false, reason: "own")
                 showReply(Summary.firstSentence(Summary.clean(reply.text)), session: reply.sessionId, folder: folder,
                           autoHide: nil)
+                pet.flash(.failed, for: 4)
                 return
             }
             ClaudeRunner.summarise(reply.text) { summary in
@@ -160,14 +161,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard !runner.isRunning else { return }
             let detail = (e["error"] as? String) ?? (e["error_type"] as? String)
             showReply("That turn failed" + (detail.map { ": \($0)" } ?? "."), session: sid, folder: cwd, autoHide: 30)
+            pet.flash(.failed, for: 4)
         case "Notification":
             let message = e["message"] as? String ?? "Claude needs you"
             let type = e["notification_type"] as? String ?? ""
             // The "waiting for your input" nudge fires after every idle minute; skip it.
             if type == "idle_prompt" || message.localizedCaseInsensitiveContains("waiting for your input") { return }
             guard !runner.isRunning else { return }
-            pet.poke()
             showReply(message, session: sid, folder: cwd, autoHide: 60)
+            pet.flash(.waiting, for: 6)
         default:
             break
         }
