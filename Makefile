@@ -45,7 +45,8 @@ install: app stop
 	open $(INSTALL_DIR)/ClaudeBuddy.app
 
 skin:
-	swift Tools/make-skin.swift Skins/default
+	swift Tools/make-skin.swift mochi Skins/default
+	swift Tools/make-skin.swift aftonsparv Skins/aftonsparv
 
 hooks:
 	python3 scripts/hooks.py install

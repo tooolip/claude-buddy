@@ -10,7 +10,7 @@ make run        # build release, bundle build/ClaudeBuddy.app, (re)launch it
 make install    # same, but installs to ~/Applications (use this copy for "Open at login")
 make stop       # quit it
 make mem        # RSS, physical footprint and CPU of the running app
-make skin       # redraw Skins/default from Tools/make-skin.swift
+make skin       # redraw the built-in skins (Mochi, Aftonsparv) from Tools/make-skin.swift
 make hooks      # add the buddy's hooks to ~/.claude/settings.json (merges, backs up first)
 make unhooks    # remove them again
 ```
