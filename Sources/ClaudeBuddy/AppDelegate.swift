@@ -22,7 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Skin.seedUserFolder()
-        guard let skin = Skin.load(id: Prefs.skin) else {
+        let backing = NSScreen.main?.backingScaleFactor ?? 2
+        guard let skin = Skin.load(id: Prefs.skin, sizeScale: CGFloat(Prefs.petScale), backingScale: backing) else {
             let alert = NSAlert()
             alert.messageText = "Claude Buddy couldn't find any skins."
             alert.runModal()
@@ -223,9 +224,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showSettings() {
         if settings == nil {
-            settings = SettingsWindow(onSkinChange: { [weak self] id in
-                guard let self, let skin = Skin.load(id: id) else { return }
-                pet.setSkin(skin)
+            settings = SettingsWindow(onPetChange: { [weak self] in
+                self?.bubble.hide()
+                self?.pet.reloadSkin()
             }, onClose: { [weak self] in self?.settings = nil })
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -247,6 +248,9 @@ extension AppDelegate {
         case "hotkey": HotkeyAction(rawValue: arg).map { Hotkeys.shared.trigger($0) }
         case "click-bubble": bubble.click()
         case "settings": showSettings()
+        case "size":
+            Prefs.petScale = Double(arg) ?? 1
+            pet.reloadSkin()
         case "snapshot": snapshot(to: URL(fileURLWithPath: arg))
         default: NSLog("Claude Buddy: unknown debug command \(cmd)")
         }
@@ -257,7 +261,9 @@ extension AppDelegate {
         var info: [String: Any] = ["state": pet.state.rawValue, "frame": pet.debugFrameIndex,
                                    "thread": thread?.id ?? "", "lastReplied": lastReplied?.id ?? "",
                                    "hasAnimation": pet.view.sprite.animation(forKey: "frames") != nil,
-                                   "hookEvents": debugEvents]
+                                   "hookEvents": debugEvents,
+                                   "visible": pet.panel.occlusionState.contains(.visible),
+                                   "onActiveSpace": pet.panel.isOnActiveSpace]
         for (name, win) in [("pet", pet.panel as NSWindow?), ("bubble", bubble.window), ("input", input.window),
                             ("settings", settings?.window)] {
             guard let win else { continue }

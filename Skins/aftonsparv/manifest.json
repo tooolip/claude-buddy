@@ -1,8 +1,8 @@
 {
   "name": "Aftonsparv",
-  "frameWidth": 144,
-  "frameHeight": 144,
-  "scale": 2,
+  "frameWidth": 288,
+  "frameHeight": 288,
+  "scale": 4,
   "states": {
     "idle":     { "sheet": "idle.png",     "frames": 16,     "fps": 8 },
     "talking":  { "sheet": "talking.png",  "frames": 8,  "fps": 10 },

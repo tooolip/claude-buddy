@@ -6,7 +6,8 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-let size: CGFloat = 144 // 72pt at 2x
+let size: CGFloat = 144 // drawing units per frame (72pt)
+let pixelScale: CGFloat = 2 // render at 288px per frame so the pet stays sharp up to 200% on Retina
 let args = Array(CommandLine.arguments.dropFirst())
 let character = args.count >= 2 ? args[0] : "mochi"
 let outDir = URL(fileURLWithPath: args.last ?? "Skins/default")
@@ -279,13 +280,15 @@ func drawCharacter(_ c: CGContext, _ p: Pose) {
 }
 
 func writeStrip(_ name: String, _ poses: [Pose]) throws {
-    let w = Int(size) * poses.count, h = Int(size)
+    let px = Int(size * pixelScale)
+    let w = px * poses.count, h = px
     let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                         space: CGColorSpace(name: CGColorSpace.sRGB)!,
                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     for (i, pose) in poses.enumerated() {
         ctx.saveGState()
-        ctx.translateBy(x: CGFloat(i) * size, y: 0)
+        ctx.translateBy(x: CGFloat(i * px), y: 0)
+        ctx.scaleBy(x: pixelScale, y: pixelScale)
         ctx.clip(to: CGRect(x: 0, y: 0, width: size, height: size))
         drawCharacter(ctx, pose)
         ctx.restoreGState()
@@ -330,13 +333,14 @@ try writeStrip("idle.png", idle)
 try writeStrip("talking.png", talking)
 try writeStrip("sleeping.png", sleeping)
 try writeStrip("dragging.png", dragging)
+try writeStrip("preview.png", [idle[0]]) // single frame, used for the app icon
 
 let manifest = """
 {
   "name": "\(character == "aftonsparv" ? "Aftonsparv" : "Mochi")",
-  "frameWidth": 144,
-  "frameHeight": 144,
-  "scale": 2,
+  "frameWidth": \(Int(size * pixelScale)),
+  "frameHeight": \(Int(size * pixelScale)),
+  "scale": \(Int(2 * pixelScale)),
   "states": {
     "idle":     { "sheet": "idle.png",     "frames": \(idle.count),     "fps": 8 },
     "talking":  { "sheet": "talking.png",  "frames": \(talking.count),  "fps": 10 },

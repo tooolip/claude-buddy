@@ -114,19 +114,30 @@ final class Pet: NSObject {
         }
         NotificationCenter.default.addObserver(self, selector: #selector(occlusionChanged),
                                                name: NSWindow.didChangeOcclusionStateNotification, object: panel)
+        NotificationCenter.default.addObserver(self, selector: #selector(backingChanged),
+                                               name: NSWindow.didChangeBackingPropertiesNotification, object: panel)
         placeInitially()
+        if panel.backingScaleFactor != skin.scale { reloadSkin() }
         refresh(force: true)
         scheduleSleep()
     }
 
     func show() { panel.orderFrontRegardless() }
 
-    func setSkin(_ newSkin: Skin) {
-        skin = newSkin
-        let origin = panel.frame.origin
-        panel.setFrame(NSRect(origin: origin, size: newSkin.pointSize), display: true)
-        view.sprite.contentsScale = newSkin.scale
+    /// Reloads the skin chosen in Settings at the current size and screen scale. The pet grows
+    /// or shrinks around its feet, so it stays where you put it.
+    @discardableResult
+    func reloadSkin() -> Bool {
+        guard let s = Skin.load(id: Prefs.skin, sizeScale: CGFloat(Prefs.petScale),
+                                backingScale: panel.backingScaleFactor) else { return false }
+        skin = s
+        let old = panel.frame
+        panel.setFrame(NSRect(x: (old.midX - s.pointSize.width / 2).rounded(), y: old.minY,
+                              width: s.pointSize.width, height: s.pointSize.height), display: true)
+        view.sprite.contentsScale = s.scale
+        Prefs.petOrigin = panel.frame.origin
         refresh(force: true)
+        return true
     }
 
     /// Any activity: wakes the pet and restarts the sleep countdown.
@@ -211,6 +222,11 @@ final class Pet: NSObject {
             sprite.add(a, forKey: "frames")
         }
         CATransaction.commit()
+    }
+
+    /// Dragged onto a screen with a different pixel density: redraw the frames for it.
+    @objc private func backingChanged() {
+        if panel.backingScaleFactor != skin.scale { reloadSkin() }
     }
 
     @objc private func occlusionChanged() {

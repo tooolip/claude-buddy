@@ -4,7 +4,7 @@ import ServiceManagement
 /// A small settings window. Built on demand and thrown away on close to keep idle memory down.
 final class SettingsWindow: NSObject, NSWindowDelegate {
     let window: NSWindow
-    private let onSkinChange: (String) -> Void
+    private let onPetChange: () -> Void
     private let onClose: () -> Void
     private let folderLabel = NSTextField(labelWithString: "")
     private let skinPopup = NSPopUpButton()
@@ -12,9 +12,10 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     private static let permissionModes = ["", "acceptEdits", "auto", "plan", "dontAsk", "bypassPermissions"]
     private static let sleepChoices: [Double] = [1, 2, 5, 10, 15, 30]
+    private static let sizeChoices: [Double] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
-    init(onSkinChange: @escaping (String) -> Void, onClose: @escaping () -> Void) {
-        self.onSkinChange = onSkinChange
+    init(onPetChange: @escaping () -> Void, onClose: @escaping () -> Void) {
+        self.onPetChange = onPetChange
         self.onClose = onClose
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
                           styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -38,6 +39,12 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         skinPopup.target = self
         skinPopup.action = #selector(skinChanged(_:))
         let openSkins = NSButton(title: "Open Skins Folder", target: self, action: #selector(openSkinsFolder))
+
+        let sizePopup = NSPopUpButton()
+        sizePopup.addItems(withTitles: Self.sizeChoices.map { "\(Int($0 * 100))%" })
+        sizePopup.selectItem(at: Self.sizeChoices.firstIndex(of: Prefs.petScale) ?? 2)
+        sizePopup.target = self
+        sizePopup.action = #selector(sizeChanged(_:))
 
         let sleepPopup = NSPopUpButton()
         sleepPopup.addItems(withTitles: Self.sleepChoices.map { "\(Int($0)) min" })
@@ -64,6 +71,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             row("Working folder:", folderLabel, chooseFolder),
             row("Permission mode:", permPopup),
             row("Skin:", skinPopup, openSkins),
+            row("Size:", sizePopup),
             row("Nap after:", sleepPopup),
             [NSGridCell.emptyContentView, summarise],
             [NSGridCell.emptyContentView, login],
@@ -95,7 +103,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         skinIds = skins.map(\.id)
         skinPopup.removeAllItems()
         for s in skins {
-            let name = (try? Skin(directory: s.url).name) ?? s.id
+            let name = Skin.name(at: s.url) ?? s.id
             skinPopup.addItem(withTitle: name)
         }
         skinPopup.selectItem(at: skinIds.firstIndex(of: Prefs.skin) ?? 0)
@@ -120,7 +128,12 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     @objc private func skinChanged(_ sender: NSPopUpButton) {
         guard skinIds.indices.contains(sender.indexOfSelectedItem) else { return }
         Prefs.skin = skinIds[sender.indexOfSelectedItem]
-        onSkinChange(Prefs.skin)
+        onPetChange()
+    }
+
+    @objc private func sizeChanged(_ sender: NSPopUpButton) {
+        Prefs.petScale = Self.sizeChoices[sender.indexOfSelectedItem]
+        onPetChange()
     }
 
     @objc private func openSkinsFolder() {

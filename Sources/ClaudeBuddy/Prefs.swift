@@ -28,6 +28,12 @@ enum Prefs {
         set { d.set(newValue, forKey: "skin") }
     }
 
+    /// Pet size relative to the skin's own size (1 = 100%).
+    static var petScale: Double {
+        get { d.object(forKey: "petScale") as? Double ?? 1 }
+        set { d.set(newValue, forKey: "petScale") }
+    }
+
     static var sleepMinutes: Double {
         get { d.object(forKey: "sleepMinutes") as? Double ?? 5 }
         set { d.set(newValue, forKey: "sleepMinutes") }

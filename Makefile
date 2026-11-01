@@ -12,12 +12,11 @@ build:
 
 icon: build/AppIcon.icns
 
-build/AppIcon.icns: Skins/default/idle.png
+build/AppIcon.icns: Skins/default/preview.png
 	@mkdir -p build/AppIcon.iconset
-	sips -c 144 144 --cropOffset 0 0 Skins/default/idle.png --out build/frame.png >/dev/null
 	for s in 16 32 128 256 512; do \
-		sips -z $$s $$s build/frame.png --out build/AppIcon.iconset/icon_$${s}x$${s}.png >/dev/null; \
-		sips -z $$((s*2)) $$((s*2)) build/frame.png --out build/AppIcon.iconset/icon_$${s}x$${s}@2x.png >/dev/null; \
+		sips -z $$s $$s Skins/default/preview.png --out build/AppIcon.iconset/icon_$${s}x$${s}.png >/dev/null; \
+		sips -z $$((s*2)) $$((s*2)) Skins/default/preview.png --out build/AppIcon.iconset/icon_$${s}x$${s}@2x.png >/dev/null; \
 	done
 	iconutil -c icns build/AppIcon.iconset -o $@
 

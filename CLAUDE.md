@@ -46,7 +46,9 @@ A skin is a folder with `manifest.json` and one horizontal PNG strip per state (
 `sleeping`, `dragging`; missing states fall back to idle). See `Skins/default/manifest.json`.
 Built-in skins ship in the app's Resources. User skins live in
 `~/Library/Application Support/ClaudeBuddy/Skins/`, which gets a `my-skin` copy of the default on
-first launch. Pick one in Settings (right-click the pet).
+first launch. Pick one in Settings (right-click the pet), along with a size from 50% to 200%.
+Frames are resampled at load to the exact pixels they're shown at, so big source sheets don't
+cost memory; the built-in ones are drawn at 288px per frame so they stay sharp at 200% on Retina.
 
 ## Testing from the terminal
 
