@@ -146,150 +146,131 @@ func drawMochi(_ c: CGContext, _ p: Pose) {
     }
 }
 
-// MARK: - Aftonsparv (cartoon take on IKEA's green alien soft toy)
+// MARK: - Aftonsparv (cartoon take on IKEA's 34 cm green alien soft toy)
 
-let afBody = rgb(0x1FA06C)
-let afShade = rgb(0x178858)
-let afInk = rgb(0x0E3B28)
-let afEye = rgb(0x2A1517)
-let afPink = rgb(0xF4A3B8)
-let afNavy = rgb(0x22357A)
-let afYellow = rgb(0xF2C230)
+let afBody = rgb(0x36A852)
+let afShade = rgb(0x2C8F45)
+let afInk = rgb(0x15472B)
+let afEye = rgb(0x111214)
+let afDot = rgb(0xE4E6E8)
+let afNavy = rgb(0x1F2A5C)
 
 func fillStroke(_ c: CGContext, _ path: CGPath, fill: CGColor, width: CGFloat = 2.5) {
     c.setFillColor(fill); c.setStrokeColor(afInk); c.setLineWidth(width)
     c.addPath(path); c.drawPath(using: .fillStroke)
 }
 
-/// Big slanted alien eye. `angle` tilts the outer corner up.
-func alienEye(_ c: CGContext, at p: CGPoint, angle: CGFloat, eyes: Eyes, scale: CGFloat) {
-    let w = 28 * scale, h = 19 * scale
+/// One of the big black eyes. `side` is -1 (left) or 1 (right); outer corners tilt up and the
+/// grey dots sit on the outer side, like the toy's embroidery.
+func alienEye(_ c: CGContext, at p: CGPoint, side: CGFloat, eyes: Eyes, scale: CGFloat) {
+    let w = 27 * scale, h = 18 * scale
+    let oval = CGRect(x: -w / 2, y: -h / 2, width: w, height: h)
     c.saveGState()
     c.translateBy(x: p.x, y: p.y)
-    c.rotate(by: angle)
+    c.rotate(by: side * 0.5)
     c.setFillColor(afEye)
     switch eyes {
     case .open, .wide:
-        c.fillEllipse(in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
+        c.fillEllipse(in: oval)
+        c.setFillColor(afDot)
+        let r = (eyes == .wide ? 3.8 : 3.3) * scale
+        c.fillEllipse(in: CGRect(x: side * w * 0.26 - r, y: h * 0.1 - r, width: r * 2, height: r * 2))
+        c.fillEllipse(in: CGRect(x: side * w * 0.2 - 1.8, y: -h * 0.24 - 1.8, width: 3.6, height: 3.6))
     case .half:
-        c.fillEllipse(in: CGRect(x: -w / 2, y: -h / 4, width: w, height: h / 2))
+        c.clip(to: CGRect(x: -w / 2, y: -h / 2, width: w, height: h * 0.5))
+        c.fillEllipse(in: oval)
     case .blink:
-        c.fillEllipse(in: CGRect(x: -w / 2, y: -1.5, width: w, height: 3))
+        c.fillEllipse(in: CGRect(x: -w / 2, y: -h * 0.2, width: w, height: 3.5))
     case .sleep:
         let lid = CGMutablePath()
-        lid.move(to: CGPoint(x: -w * 0.42, y: 1))
-        lid.addQuadCurve(to: CGPoint(x: w * 0.42, y: 1), control: CGPoint(x: 0, y: -h * 0.45))
+        lid.move(to: CGPoint(x: -w * 0.45, y: -h * 0.05))
+        lid.addQuadCurve(to: CGPoint(x: w * 0.45, y: -h * 0.05), control: CGPoint(x: 0, y: -h * 0.6))
         c.setStrokeColor(afEye); c.setLineWidth(3); c.setLineCap(.round)
         c.addPath(lid); c.strokePath()
     }
     c.restoreGState()
-    if eyes == .open || eyes == .wide {
-        c.setFillColor(rgb(0xFFFFFF))
-        let r = (eyes == .wide ? 3.8 : 3.2) * scale
-        c.fillEllipse(in: CGRect(x: p.x + w * 0.12 - r, y: p.y + h * 0.12 - r, width: r * 2, height: r * 2))
-        c.fillEllipse(in: CGRect(x: p.x + w * 0.3 - 1.6, y: p.y - h * 0.12 - 1.6, width: 3.2, height: 3.2))
-    }
 }
 
 func drawAftonsparv(_ c: CGContext, _ p: Pose) {
     let cx = size / 2
     let held = p.swing != nil
-    let base: CGFloat = (held ? 11 : 14) + p.dy
+    let base: CGFloat = (held ? 10 : 12) + p.dy
     var gesture: CGFloat = 0
     if case .open(let a) = p.mouth { gesture = a }
 
     if !held {
-        let sw = 52 - p.dy * 2
+        let sw = 46 - p.dy * 2
         c.setFillColor(rgb(0x000000, 0.16))
-        c.fillEllipse(in: CGRect(x: cx - sw / 2, y: 8, width: sw, height: 9))
+        c.fillEllipse(in: CGRect(x: cx - sw / 2, y: 7, width: sw, height: 8))
     }
 
-    // Legs
+    // Long straight legs, side by side
     for side: CGFloat in [-1, 1] {
-        var r = CGRect(x: cx + side * 8 - 7, y: base, width: 14, height: 22)
-        if let s = p.swing { r.origin.x += s * 3 * side; r.origin.y -= 4 }
-        fillStroke(c, CGPath(roundedRect: r, cornerWidth: 7, cornerHeight: 7, transform: nil), fill: afShade)
+        var r = CGRect(x: cx + side * 7 - 6, y: base, width: 12, height: 32 * p.sy)
+        if let s = p.swing { r.origin.x += s * 3 * side; r.origin.y -= 3 }
+        fillStroke(c, CGPath(roundedRect: r, cornerWidth: 6, cornerHeight: 6, transform: nil), fill: afShade)
     }
 
-    let bw = 40 * p.sx, bh = 34 * p.sy
-    let body = CGRect(x: cx - bw / 2, y: base + 12, width: bw, height: bh)
+    let torso = CGRect(x: cx - 17 * p.sx, y: base + 24 * p.sy, width: 34 * p.sx, height: 34 * p.sy)
 
-    // Arms sit behind the body, hands out to the sides (up by the head while held)
-    let shoulderY = body.maxY - 9
+    // Long droopy arms behind the torso, with dotted tips
     for side: CGFloat in [-1, 1] {
-        let shoulder = CGPoint(x: cx + side * (bw / 2 - 6), y: shoulderY)
-        var hand = CGPoint(x: cx + side * 31, y: shoulderY - 9)
-        if held { hand = CGPoint(x: cx + side * 43, y: shoulderY + 10) }
-        if side > 0 { hand.y += gesture * 7 }
-        strokeLine(c, [shoulder, hand], width: 13, color: afInk)
-        strokeLine(c, [shoulder, hand], width: 8, color: afBody)
-        let palm = CGRect(x: hand.x - 7, y: hand.y - 7, width: 14, height: 14)
-        fillStroke(c, CGPath(ellipseIn: palm, transform: nil), fill: afBody)
-        // the little printed pattern on its hands
-        let tri = CGMutablePath()
-        tri.move(to: CGPoint(x: hand.x - 3.5, y: hand.y + 2.5))
-        tri.addLine(to: CGPoint(x: hand.x + 3.5, y: hand.y + 2.5))
-        tri.addLine(to: CGPoint(x: hand.x, y: hand.y - 3))
-        tri.closeSubpath()
-        c.setFillColor(afYellow); c.addPath(tri); c.fillPath()
-        c.setFillColor(afNavy); c.fillEllipse(in: CGRect(x: hand.x - side * 4.5 - 1.5, y: hand.y - 4, width: 3, height: 3))
-        c.setFillColor(afPink); c.fillEllipse(in: CGRect(x: hand.x + side * 3.5 - 1.3, y: hand.y - 5, width: 2.6, height: 2.6))
-    }
-
-    // Body, with the ribbed fabric
-    fillStroke(c, CGPath(ellipseIn: body, transform: nil), fill: afBody)
-    c.saveGState()
-    c.addEllipse(in: body.insetBy(dx: 2, dy: 2)); c.clip()
-    for i in -2...2 {
-        let x = cx + CGFloat(i) * 6
-        strokeLine(c, [CGPoint(x: x, y: body.minY), CGPoint(x: x, y: body.maxY)], width: 1, color: rgb(0x0E3B28, 0.18))
-    }
-    c.restoreGState()
-
-    // Head
-    let hw = 74 * p.sx, hh = 58 * p.sy
-    let head = CGRect(x: cx - hw / 2, y: body.maxY - 8, width: hw, height: hh)
-
-    // Antennae (behind the head): pink tip on the left, navy on the right
-    for (side, dot) in [(CGFloat(-1), afPink), (1, afNavy)] {
-        let root = CGPoint(x: cx + side * 13, y: head.maxY - 8)
-        let tip = CGPoint(x: cx + side * 26 + p.sway * 3, y: head.maxY + 14)
-        strokeLine(c, [root, tip], width: 8, color: afInk)
-        strokeLine(c, [root, tip], width: 3.5, color: afBody)
-        fillStroke(c, CGPath(ellipseIn: CGRect(x: tip.x - 7, y: tip.y - 7, width: 14, height: 14), transform: nil),
+        let shoulder = CGPoint(x: cx + side * 11 * p.sx, y: torso.maxY - 7)
+        var hand = CGPoint(x: cx + side * 31, y: torso.minY + 4)
+        if held { hand = CGPoint(x: cx + side * 37, y: torso.maxY + 10) }
+        if side > 0 { hand.y += gesture * 9; hand.x += gesture * 2 }
+        strokeLine(c, [shoulder, hand], width: 12.5, color: afInk)
+        strokeLine(c, [shoulder, hand], width: 7.5, color: afBody)
+        fillStroke(c, CGPath(ellipseIn: CGRect(x: hand.x - 5.5, y: hand.y - 5.5, width: 11, height: 11), transform: nil),
                    fill: afBody)
-        c.setFillColor(dot); c.fillEllipse(in: CGRect(x: tip.x - 3.3, y: tip.y - 3.3, width: 6.6, height: 6.6))
+        c.setFillColor(afDot); c.fillEllipse(in: CGRect(x: hand.x + side * 1.5 - 1.6, y: hand.y - 3, width: 3.2, height: 3.2))
+        c.setFillColor(afNavy); c.fillEllipse(in: CGRect(x: hand.x - side * 2 - 1.3, y: hand.y - 0.5, width: 2.6, height: 2.6))
+    }
+
+    fillStroke(c, CGPath(ellipseIn: torso, transform: nil), fill: afBody)
+
+    // Head (stretches less than the body so the face stays round)
+    let hw = 62 * p.sx, hh = 52 * (1 + (p.sy - 1) * 0.4)
+    let head = CGRect(x: cx - hw / 2, y: torso.maxY - 7, width: hw, height: hh)
+
+    // Antennae with disc tips: white dot on the left, navy on the right
+    for (side, dot) in [(CGFloat(-1), afDot), (1, afNavy)] {
+        let root = CGPoint(x: cx + side * 9, y: head.maxY - 6)
+        let tip = CGPoint(x: cx + side * 19 + p.sway * 2.5, y: head.maxY + (held ? 14 : 15))
+        strokeLine(c, [root, tip], width: 7, color: afInk)
+        strokeLine(c, [root, tip], width: 3, color: afBody)
+        fillStroke(c, CGPath(ellipseIn: CGRect(x: tip.x - 6.5, y: tip.y - 6.5, width: 13, height: 13), transform: nil),
+                   fill: afBody)
+        c.setFillColor(dot); c.fillEllipse(in: CGRect(x: tip.x - 2.8, y: tip.y - 2.8, width: 5.6, height: 5.6))
     }
 
     fillStroke(c, CGPath(ellipseIn: head, transform: nil), fill: afBody)
-    c.setFillColor(rgb(0xFFFFFF, 0.16))
-    c.fillEllipse(in: CGRect(x: head.minX + hw * 0.16, y: head.minY + hh * 0.6, width: hw * 0.3, height: hh * 0.24))
-    // seam down the top of the head
-    strokeLine(c, [CGPoint(x: cx, y: head.maxY - 1), CGPoint(x: cx, y: head.maxY - 13)], width: 1.5, color: rgb(0x0E3B28, 0.4))
+    c.setFillColor(rgb(0xFFFFFF, 0.15))
+    c.fillEllipse(in: CGRect(x: head.minX + hw * 0.18, y: head.minY + hh * 0.66, width: hw * 0.28, height: hh * 0.18))
+    // the seam down the middle of the face
+    strokeLine(c, [CGPoint(x: cx, y: head.maxY - 1), CGPoint(x: cx, y: head.minY + hh * 0.3)],
+               width: 1.4, color: rgb(0x15472B, 0.32))
 
-    // Face: big slanted eyes, tiny nose, a mouth only when it talks
-    let ey = head.minY + hh * 0.46
-    let eyeScale: CGFloat = p.eyes == .wide ? 1.12 : 1
-    alienEye(c, at: CGPoint(x: cx - 17 * max(p.sx, 1), y: ey), angle: -0.42, eyes: p.eyes, scale: eyeScale)
-    alienEye(c, at: CGPoint(x: cx + 17 * max(p.sx, 1), y: ey), angle: 0.42, eyes: p.eyes, scale: eyeScale)
-    c.setFillColor(afEye)
-    c.fillEllipse(in: CGRect(x: cx - 2, y: ey - 12, width: 4, height: 3))
-    let my = ey - 19
-    switch p.mouth {
-    case .open(let a) where a > 0.05:
-        let h = 2 + 7 * a
-        c.fillEllipse(in: CGRect(x: cx - 5, y: my - h / 2, width: 10, height: h))
-        if a > 0.5 {
-            c.setFillColor(afPink); c.fillEllipse(in: CGRect(x: cx - 3, y: my - h / 2 + 0.5, width: 6, height: h * 0.4))
-        }
-    case .oh:
-        c.fillEllipse(in: CGRect(x: cx - 3, y: my - 3.5, width: 6, height: 7))
-    default:
-        break
+    let ey = head.minY + hh * 0.5
+    let eyeScale: CGFloat = p.eyes == .wide ? 1.1 : 1
+    for side: CGFloat in [-1, 1] {
+        alienEye(c, at: CGPoint(x: cx + side * 16 * max(p.sx, 1), y: ey), side: side, eyes: p.eyes, scale: eyeScale)
     }
 
+    // Small dark "o" mouth that opens when it talks
+    let my = head.minY + hh * 0.16
+    var mw: CGFloat = 4.5, mh: CGFloat = 4
+    switch p.mouth {
+    case .open(let a): mw = 5 + 3 * a; mh = 3.5 + 6 * a
+    case .oh: mw = 6.5; mh = 7.5
+    case .sleep: mw = 3.5; mh = 2.5
+    case .smile: break
+    }
+    c.setFillColor(afEye)
+    c.fillEllipse(in: CGRect(x: cx - mw / 2, y: my - mh / 2, width: mw, height: mh))
+
     if let phase = p.zPhase {
-        drawZs(c, phase: phase, at: CGPoint(x: cx + 33, y: head.maxY - 22), color: 0x0E3B28)
+        drawZs(c, phase: phase, at: CGPoint(x: cx + 28, y: head.maxY - 18), color: 0x15472B)
     }
 }
 
