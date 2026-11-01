@@ -1,0 +1,12 @@
+{
+  "name": "Mochi",
+  "frameWidth": 144,
+  "frameHeight": 144,
+  "scale": 2,
+  "states": {
+    "idle":     { "sheet": "idle.png",     "frames": 16,     "fps": 8 },
+    "talking":  { "sheet": "talking.png",  "frames": 8,  "fps": 10 },
+    "sleeping": { "sheet": "sleeping.png", "frames": 8, "fps": 4 },
+    "dragging": { "sheet": "dragging.png", "frames": 4, "fps": 10 }
+  }
+}
