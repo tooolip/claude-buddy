@@ -5,7 +5,7 @@ enum Prefs {
     private static let d = UserDefaults.standard
 
     static var workingFolder: String {
-        get { d.string(forKey: "workingFolder") ?? NSHomeDirectory() + "/Code/projects" }
+        get { d.string(forKey: "workingFolder") ?? NSHomeDirectory() }
         set { d.set(newValue, forKey: "workingFolder") }
     }
 
