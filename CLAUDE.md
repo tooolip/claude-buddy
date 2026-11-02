@@ -10,8 +10,7 @@ make run        # build release, bundle build/ClaudeBuddy.app, (re)launch it
 make install    # same, but installs to ~/Applications (use this copy for "Open at login")
 make stop       # quit it
 make mem        # RSS, physical footprint and CPU of the running app
-make skin       # redraw the built-in skins (Mochi, Aftonsparv) from Tools/make-skin.swift
-make plush      # ray-trace the photoreal Plush alien skin from Tools/render-plush.swift
+make skin       # redraw Mochi from Tools/make-skin.swift
 make hooks      # add the buddy's hooks to ~/.claude/settings.json (merges, backs up first)
 make unhooks    # remove them again
 ```
@@ -50,7 +49,7 @@ A state can also point at a `row` of a grid sheet, pick `cells` (columns), and g
 back to `dragging`), `waving` (reply arrived; falls back to `talking`), `failed`, `waiting`.
 `python3 scripts/import-codex-pet.py <spritesheet.png> <id> "<Name>" [--sleep 2,3]` turns a
 Codex pet sheet into a user skin.
-Built-in skins ship in the app's Resources. User skins live in
+Mochi is the only built-in skin and ships in the app's Resources. User skins live in
 `~/Library/Application Support/ClaudeBuddy/Skins/`, which gets a `my-skin` copy of the default on
 first launch. Pick one in Settings (right-click the pet), along with a size from 50% to 200%.
 Frames are resampled at load to the exact pixels they're shown at, so big source sheets don't

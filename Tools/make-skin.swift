@@ -1,6 +1,5 @@
 // Draws a built-in skin as sprite strips plus a manifest.
-// Usage: swift Tools/make-skin.swift mochi Skins/default
-//        swift Tools/make-skin.swift aftonsparv Skins/aftonsparv
+// Usage: swift Tools/make-skin.swift Skins/default
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -9,7 +8,6 @@ import UniformTypeIdentifiers
 let size: CGFloat = 144 // drawing units per frame (72pt)
 let pixelScale: CGFloat = 2 // render at 288px per frame so the pet stays sharp up to 200% on Retina
 let args = Array(CommandLine.arguments.dropFirst())
-let character = args.count >= 2 ? args[0] : "mochi"
 let outDir = URL(fileURLWithPath: args.last ?? "Skins/default")
 
 func rgb(_ hex: UInt32, _ a: CGFloat = 1) -> CGColor {
@@ -147,138 +145,6 @@ func drawMochi(_ c: CGContext, _ p: Pose) {
     }
 }
 
-// MARK: - Aftonsparv (cartoon take on IKEA's 34 cm green alien soft toy)
-
-let afBody = rgb(0x36A852)
-let afShade = rgb(0x2C8F45)
-let afInk = rgb(0x15472B)
-let afEye = rgb(0x111214)
-let afDot = rgb(0xE4E6E8)
-let afNavy = rgb(0x1F2A5C)
-
-func fillStroke(_ c: CGContext, _ path: CGPath, fill: CGColor, width: CGFloat = 2.5) {
-    c.setFillColor(fill); c.setStrokeColor(afInk); c.setLineWidth(width)
-    c.addPath(path); c.drawPath(using: .fillStroke)
-}
-
-/// One of the big black eyes. `side` is -1 (left) or 1 (right); outer corners tilt up and the
-/// grey dots sit on the outer side, like the toy's embroidery.
-func alienEye(_ c: CGContext, at p: CGPoint, side: CGFloat, eyes: Eyes, scale: CGFloat) {
-    let w = 27 * scale, h = 18 * scale
-    let oval = CGRect(x: -w / 2, y: -h / 2, width: w, height: h)
-    c.saveGState()
-    c.translateBy(x: p.x, y: p.y)
-    c.rotate(by: side * 0.5)
-    c.setFillColor(afEye)
-    switch eyes {
-    case .open, .wide:
-        c.fillEllipse(in: oval)
-        c.setFillColor(afDot)
-        let r = (eyes == .wide ? 3.8 : 3.3) * scale
-        c.fillEllipse(in: CGRect(x: side * w * 0.26 - r, y: h * 0.1 - r, width: r * 2, height: r * 2))
-        c.fillEllipse(in: CGRect(x: side * w * 0.2 - 1.8, y: -h * 0.24 - 1.8, width: 3.6, height: 3.6))
-    case .half:
-        c.clip(to: CGRect(x: -w / 2, y: -h / 2, width: w, height: h * 0.5))
-        c.fillEllipse(in: oval)
-    case .blink:
-        c.fillEllipse(in: CGRect(x: -w / 2, y: -h * 0.2, width: w, height: 3.5))
-    case .sleep:
-        let lid = CGMutablePath()
-        lid.move(to: CGPoint(x: -w * 0.45, y: -h * 0.05))
-        lid.addQuadCurve(to: CGPoint(x: w * 0.45, y: -h * 0.05), control: CGPoint(x: 0, y: -h * 0.6))
-        c.setStrokeColor(afEye); c.setLineWidth(3); c.setLineCap(.round)
-        c.addPath(lid); c.strokePath()
-    }
-    c.restoreGState()
-}
-
-func drawAftonsparv(_ c: CGContext, _ p: Pose) {
-    let cx = size / 2
-    let held = p.swing != nil
-    let base: CGFloat = (held ? 10 : 12) + p.dy
-    var gesture: CGFloat = 0
-    if case .open(let a) = p.mouth { gesture = a }
-
-    if !held {
-        let sw = 46 - p.dy * 2
-        c.setFillColor(rgb(0x000000, 0.16))
-        c.fillEllipse(in: CGRect(x: cx - sw / 2, y: 7, width: sw, height: 8))
-    }
-
-    // Long straight legs, side by side
-    for side: CGFloat in [-1, 1] {
-        var r = CGRect(x: cx + side * 7 - 6, y: base, width: 12, height: 32 * p.sy)
-        if let s = p.swing { r.origin.x += s * 3 * side; r.origin.y -= 3 }
-        fillStroke(c, CGPath(roundedRect: r, cornerWidth: 6, cornerHeight: 6, transform: nil), fill: afShade)
-    }
-
-    let torso = CGRect(x: cx - 17 * p.sx, y: base + 24 * p.sy, width: 34 * p.sx, height: 34 * p.sy)
-
-    // Long droopy arms behind the torso, with dotted tips
-    for side: CGFloat in [-1, 1] {
-        let shoulder = CGPoint(x: cx + side * 11 * p.sx, y: torso.maxY - 7)
-        var hand = CGPoint(x: cx + side * 31, y: torso.minY + 4)
-        if held { hand = CGPoint(x: cx + side * 37, y: torso.maxY + 10) }
-        if side > 0 { hand.y += gesture * 9; hand.x += gesture * 2 }
-        strokeLine(c, [shoulder, hand], width: 12.5, color: afInk)
-        strokeLine(c, [shoulder, hand], width: 7.5, color: afBody)
-        fillStroke(c, CGPath(ellipseIn: CGRect(x: hand.x - 5.5, y: hand.y - 5.5, width: 11, height: 11), transform: nil),
-                   fill: afBody)
-        c.setFillColor(afDot); c.fillEllipse(in: CGRect(x: hand.x + side * 1.5 - 1.6, y: hand.y - 3, width: 3.2, height: 3.2))
-        c.setFillColor(afNavy); c.fillEllipse(in: CGRect(x: hand.x - side * 2 - 1.3, y: hand.y - 0.5, width: 2.6, height: 2.6))
-    }
-
-    fillStroke(c, CGPath(ellipseIn: torso, transform: nil), fill: afBody)
-
-    // Head (stretches less than the body so the face stays round)
-    let hw = 62 * p.sx, hh = 52 * (1 + (p.sy - 1) * 0.4)
-    let head = CGRect(x: cx - hw / 2, y: torso.maxY - 7, width: hw, height: hh)
-
-    // Antennae with disc tips: white dot on the left, navy on the right
-    for (side, dot) in [(CGFloat(-1), afDot), (1, afNavy)] {
-        let root = CGPoint(x: cx + side * 9, y: head.maxY - 6)
-        let tip = CGPoint(x: cx + side * 19 + p.sway * 2.5, y: head.maxY + (held ? 14 : 15))
-        strokeLine(c, [root, tip], width: 7, color: afInk)
-        strokeLine(c, [root, tip], width: 3, color: afBody)
-        fillStroke(c, CGPath(ellipseIn: CGRect(x: tip.x - 6.5, y: tip.y - 6.5, width: 13, height: 13), transform: nil),
-                   fill: afBody)
-        c.setFillColor(dot); c.fillEllipse(in: CGRect(x: tip.x - 2.8, y: tip.y - 2.8, width: 5.6, height: 5.6))
-    }
-
-    fillStroke(c, CGPath(ellipseIn: head, transform: nil), fill: afBody)
-    c.setFillColor(rgb(0xFFFFFF, 0.15))
-    c.fillEllipse(in: CGRect(x: head.minX + hw * 0.18, y: head.minY + hh * 0.66, width: hw * 0.28, height: hh * 0.18))
-    // the seam down the middle of the face
-    strokeLine(c, [CGPoint(x: cx, y: head.maxY - 1), CGPoint(x: cx, y: head.minY + hh * 0.3)],
-               width: 1.4, color: rgb(0x15472B, 0.32))
-
-    let ey = head.minY + hh * 0.5
-    let eyeScale: CGFloat = p.eyes == .wide ? 1.1 : 1
-    for side: CGFloat in [-1, 1] {
-        alienEye(c, at: CGPoint(x: cx + side * 16 * max(p.sx, 1), y: ey), side: side, eyes: p.eyes, scale: eyeScale)
-    }
-
-    // Small dark "o" mouth that opens when it talks
-    let my = head.minY + hh * 0.16
-    var mw: CGFloat = 4.5, mh: CGFloat = 4
-    switch p.mouth {
-    case .open(let a): mw = 5 + 3 * a; mh = 3.5 + 6 * a
-    case .oh: mw = 6.5; mh = 7.5
-    case .sleep: mw = 3.5; mh = 2.5
-    case .smile: break
-    }
-    c.setFillColor(afEye)
-    c.fillEllipse(in: CGRect(x: cx - mw / 2, y: my - mh / 2, width: mw, height: mh))
-
-    if let phase = p.zPhase {
-        drawZs(c, phase: phase, at: CGPoint(x: cx + 28, y: head.maxY - 18), color: 0x15472B)
-    }
-}
-
-func drawCharacter(_ c: CGContext, _ p: Pose) {
-    character == "aftonsparv" ? drawAftonsparv(c, p) : drawMochi(c, p)
-}
-
 func writeStrip(_ name: String, _ poses: [Pose]) throws {
     let px = Int(size * pixelScale)
     let w = px * poses.count, h = px
@@ -290,7 +156,7 @@ func writeStrip(_ name: String, _ poses: [Pose]) throws {
         ctx.translateBy(x: CGFloat(i * px), y: 0)
         ctx.scaleBy(x: pixelScale, y: pixelScale)
         ctx.clip(to: CGRect(x: 0, y: 0, width: size, height: size))
-        drawCharacter(ctx, pose)
+        drawMochi(ctx, pose)
         ctx.restoreGState()
     }
     let url = outDir.appendingPathComponent(name)
@@ -337,7 +203,7 @@ try writeStrip("preview.png", [idle[0]]) // single frame, used for the app icon
 
 let manifest = """
 {
-  "name": "\(character == "aftonsparv" ? "Aftonsparv" : "Mochi")",
+  "name": "Mochi",
   "frameWidth": \(Int(size * pixelScale)),
   "frameHeight": \(Int(size * pixelScale)),
   "scale": \(Int(2 * pixelScale)),
